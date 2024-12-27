@@ -30,7 +30,6 @@ def fetch_medal_tally(df, year, country):
 
     return x
 
-# Overall analysis
 
 def country_year_list(df):
     years = df['Year'].unique().tolist()
@@ -45,9 +44,10 @@ def country_year_list(df):
 
 
 def data_over_time(df, col):
-    nations_over_time = df.drop_duplicates(["Year",col])['Year'].value_counts().reset_index().sort_values('index')
-    nations_over_time = nations_over_time.rename(columns={'index':'Editions','Year': col})
-    return nations_over_time
+    data = df.drop_duplicates(["Year", col])['Year'].value_counts().reset_index()
+    data.columns = ['Year', 'Count']
+    data = data.sort_values('Year')
+    return data
 
 
 def medal_tally(df):
@@ -64,18 +64,19 @@ def medal_tally(df):
 
     return medal_tally_df
 
-
-
 def best_athletes(df, sport):
-    temp_df = df.dropna(subset=['Medal'])
-
     if sport != "Overall":
-        temp_df = temp_df[temp_df['Sport']== sport]
+        temp_df = df[df['Sport'] == sport]
+    else:
+        temp_df = df
+    athlete_counts = temp_df['Name'].value_counts().reset_index()
+    athlete_counts.columns = ['Name', 'Count']  
 
-    x = temp_df['Name'].value_counts().reset_index().head(10).merge(df, left_on="index", right_on="Name", how='left')[['index','Name_x','Sport','region']].drop_duplicates("index")
-    x.rename(columns={'index':'Name', 'Name_x':'Medals'}, inplace=True)
+    top_athletes = athlete_counts.head(10).merge(
+        df, left_on="Name", right_on="Name", how='left'
+    )[['Name', 'Count', 'Sport', 'region']].drop_duplicates('Name')
 
-    return x
+    return top_athletes
 
 
 # Country Analysis
@@ -98,15 +99,18 @@ def country_event_heatmap(df, country):
     return pt_df
 
 def country_athlete_analysis(df, country):
-    temp_df = df.dropna(subset=['Medal'])
-    temp_df = temp_df[temp_df['region'] == country]
+    temp_df = df[df['region'] == country]
+    
+    top_athletes = temp_df['Name'].value_counts().reset_index().head(10)
+    top_athletes.columns = ['Name', 'Count']  # Rename columns for clarity
+    
+    merged_df = top_athletes.merge(temp_df, on='Name', how='left')
+    
+    result = merged_df[['Name', 'Count', 'Sport']].drop_duplicates('Name')
+    
+    return result
 
-    a = temp_df['Name'].value_counts().reset_index().head(10).merge(df, left_on='index', right_on='Name', how='left')[['index','Name_x','Sport']].drop_duplicates('index')
-    a.rename(columns={'index':'Name','Name_x':'Medals'}, inplace=True)
-    return a 
 
-
-#  Athlete analysis
 
 def men_vs_women(df):
     athlete_df = df.drop_duplicates(subset=['Name', 'region'])
